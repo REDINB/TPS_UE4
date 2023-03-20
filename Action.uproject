@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{803043CD-4F87-A126-2420-DD9E7253E304}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "Action",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"AIModule",
+				"UMG",
+				"CoreUObject"
+			]
+		}
+	]
+}
