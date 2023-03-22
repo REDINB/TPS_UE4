@@ -8,6 +8,7 @@
 #include "SGameModeBase.generated.h"
 
 
+class USSaveGame;
 class UEnvQueryInstanceBlueprintWrapper;
 class UEnvQuery;
 class UCurveFloat;
@@ -16,6 +17,12 @@ class ACTION_API ASGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 protected:
+	//存储的文件名
+	FString SlotName;
+
+	//存储游戏时当前的场景
+	UPROPERTY()
+	USSaveGame *CurrentSaveGame;
 
 	//选择AI人物的蓝图类
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
@@ -71,6 +78,7 @@ protected:
 public:
 
 	ASGameModeBase();
+	
 	virtual void StartPlay() override;
 
 	//控制台命令，杀死所有机器人
@@ -79,5 +87,17 @@ public:
 
 	//被击杀函数
 	virtual void OnActionKilled(AActor *VictimActor, AActor *Killer);
+
+	//初始化游戏
+	void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+
+	//处理新加入玩家的函数
+	void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+
+	//存储游戏和读取游戏
+	UFUNCTION(BlueprintCallable, Category = "SaveGame")
+	void WriteSaveGame();
+
+	void LoadSaveGame();
 	
 };

@@ -7,11 +7,16 @@
 #include "EngineUtils.h"
 #include "SAttributeComponent.h"
 #include "SCharacter.h"
+#include "SGameplayInterface.h"
 #include "SPlayerState.h"
+#include "SSaveGame.h"
 #include "AI/SAICharacter.h"
 #include "EnvironmentQuery/EnvQueryTypes.h"
 #include "EnvironmentQuery/EnvQueryManager.h"
 #include "EnvironmentQuery/EnvQueryInstanceBlueprintWrapper.h"
+#include "GameFramework/GameStateBase.h"
+#include "Kismet/GameplayStatics.h"
+#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 //停止机器人生成的控制台变量
 static TAutoConsoleVariable<bool> CVarSpawnBots(TEXT("su.SpawnBots"), true, TEXT("Enable spawning of bots via timer."), ECVF_Cheat);
@@ -29,6 +34,28 @@ ASGameModeBase::ASGameModeBase()
 	RequiredPowerupDistance = 2000;
 
 	PlayerStateClass = ASPlayerState::StaticClass();
+
+	SlotName = "SaveGame01";
+}
+
+//初始化游戏，直接读取游戏
+void ASGameModeBase::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	LoadSaveGame();
+}
+
+void ASGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+	//生成新玩家时读取存储游戏中的状态
+	ASPlayerState *PS = NewPlayer->GetPlayerState<ASPlayerState>();
+	if(PS)
+	{
+		PS->LoadPlayerState(CurrentSaveGame);
+	}
 }
 
 void ASGameModeBase::StartPlay()
@@ -111,8 +138,7 @@ void ASGameModeBase::OnBotSpawnQueryCompleted(UEnvQueryInstanceBlueprintWrapper*
 	{
 		//在指定位置生成AI人物
 		GetWorld()->SpawnActor<AActor>(MinionClass, Locations[0], FRotator::ZeroRotator);
-
-
+		
 		DrawDebugSphere(GetWorld(), Locations[0], 50.0f, 20, FColor::Blue, false, 60.0f);
 	}
 	
@@ -153,10 +179,6 @@ void ASGameModeBase::OnPowerupSpawnQueryCompleted(UEnvQueryInstanceBlueprintWrap
 			//如果当前选择的位置与任意一个物品距离过近则退出重新选择位置
 			if (DistanceTo < RequiredPowerupDistance)
 			{
-				// Show skipped locations due to distance
-				//DrawDebugSphere(GetWorld(), PickedLocation, 50.0f, 20, FColor::Red, false, 10.0f);
-
-				// too close, skip to next attempt
 				bValidLocation = false;
 				break;
 			}
@@ -222,6 +244,7 @@ void ASGameModeBase::OnActionKilled(AActor* VictimActor, AActor* Killer)
 	}
 }
 
+
 void ASGameModeBase::RespawnPlayerElapsed(AController* Controller)
 {
 	if(ensure(Controller))
@@ -231,4 +254,106 @@ void ASGameModeBase::RespawnPlayerElapsed(AController* Controller)
 		//生成一个新的人物
 		RestartPlayer(Controller);
 	}
+}
+
+void ASGameModeBase::WriteSaveGame()
+{
+	//循环所有的玩家状态，对他们的状态依次进行存储
+	for(int32 i = 0; i < GameState->PlayerArray.Num(); ++i)
+	{
+		ASPlayerState *PS = Cast<ASPlayerState>(GameState->PlayerArray[i]);
+		if(PS)
+		{
+			PS->SavePlayerState(CurrentSaveGame);
+			//暂时为单人游戏，跳出
+			break;
+		}
+	}
+
+	//在进行新的存储前先清除原有的存储
+	CurrentSaveGame->SavedActors.Empty();
+
+	//遍历世界中所有的actor
+	for(FActorIterator It(GetWorld()); It; ++It)
+	{
+		AActor *Actor = *It;
+		//如果不是gameplay中的actor则跳过
+		if(!Actor->Implements<USGameplayInterface>())
+		{
+			continue;
+		}
+		//获取当前actor的信息并存储到actor列表中
+		FActorSaveData ActorData;
+		ActorData.ActorName = Actor->GetName();
+		ActorData.Transform = Actor->GetActorTransform();
+
+		//使用结构体中的序列化数组来存储数据
+		FMemoryWriter MemWriter(ActorData.ByteData);
+		//将写内存设置成一个文档
+		FObjectAndNameAsStringProxyArchive Ar(MemWriter, true);
+		//仅搜索UPROPERTY中带有SaveGame关键字的
+		Ar.ArIsSaveGame = true;
+		//对actor进行序列化存储
+		Actor->Serialize(Ar);
+
+		CurrentSaveGame->SavedActors.Add(ActorData);
+	}
+	
+	//存储游戏
+	UGameplayStatics::SaveGameToSlot(CurrentSaveGame, SlotName, 0);
+}
+
+void ASGameModeBase::LoadSaveGame()
+{
+	//如果有对应名字的的savegame
+	if(UGameplayStatics::LoadGameFromSlot(SlotName, 0))
+	{
+		CurrentSaveGame = Cast<USSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, 0));
+		if(CurrentSaveGame == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Failed to load SaveGame Data."));
+			return ;
+		}
+		UE_LOG(LogTemp, Log, TEXT("Load SaveGame Data."));
+
+		//遍历世界中所有的actor
+		for(FActorIterator It(GetWorld()); It; ++It)
+		{
+			AActor *Actor = *It;
+			//如果不是gameplay中的actor则跳过
+			if(!Actor->Implements<USGameplayInterface>())
+			{
+				continue;
+			}
+			//遍历存储游戏实例中的所有actor找到名字相同的actor并进行位置转化。
+			for(FActorSaveData ActorData : CurrentSaveGame->SavedActors)
+			{
+				if(ActorData.ActorName == Actor->GetName())
+				{
+					Actor->SetActorTransform(ActorData.Transform);
+					FMemoryReader MemReader(ActorData.ByteData);
+					//将读内存设置成一个文档
+					FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
+					//仅搜索UPROPERTY中带有SaveGame关键字的
+					Ar.ArIsSaveGame = true;
+					//对actor进行序列化读取
+					Actor->Serialize(Ar);
+
+					//初始化对象状态
+					ISGameplayInterface::Execute_OnActorLoaded(Actor);
+					
+					break;
+				}
+			}
+		}
+	}
+	//如果没有就创建一个新的
+	else
+	{
+		CurrentSaveGame = Cast<USSaveGame>(UGameplayStatics::CreateSaveGameObject(USSaveGame::StaticClass()));
+
+		UE_LOG(LogTemp, Log, TEXT("Create New SaveGame Data."));
+	}
+
+
 }

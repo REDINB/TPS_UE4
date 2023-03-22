@@ -22,6 +22,10 @@ class ACTION_API ISGameplayInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+
+	//加载游戏时检测actor状态
+	UFUNCTION(BlueprintNativeEvent)
+	void OnActorLoaded();
 	
 	//BlueprintNativeEvent除了实现C++调用蓝图外，同样会调用一个本地方法，本地方法为 声明的函数名+_Implementation
 	//这样就可以实现一次调用，两个实现（c++实现，蓝图实现）
