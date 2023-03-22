@@ -46,12 +46,7 @@ void USActionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 	for (USAction* Action : Actions)
 	{
 		FColor TextColor = Action->IsRunning() ? FColor::Blue : FColor::White;
-
-		FString ActionMsg = FString::Printf(TEXT("[%s] Action: %s : IsRunning: %s : Outer: %s"),
-			*GetNameSafe(GetOwner()),
-			*Action->ActionName.ToString(),
-			Action->IsRunning() ? TEXT("true") : TEXT("false"),
-			*GetNameSafe(Action->GetOuter()));
+		FString ActionMsg = FString::Printf(TEXT("[%s] Action: %s"), *GetNameSafe(GetOwner()), *GetNameSafe(Action));
 
 		LogOnScreen(this, ActionMsg, TextColor, 0.0f);
 	}
@@ -63,6 +58,13 @@ void USActionComponent::AddAction(AActor* Instigator, TSubclassOf<USAction> Acti
 	if (!ensure(ActionClass))
 	{
 		return;
+	}
+
+	//客户端请求发出警告
+	if(!GetOwner()->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Client attempting to AddAction. [Class: %s]"), *GetNameSafe(ActionClass));
+		return ;
 	}
 
 	//创建要加入action的实体
@@ -124,6 +126,7 @@ bool USActionComponent::StartActionByName(AActor* Instigator, FName ActionName)
 			{
 				ServerStartAction(Instigator, ActionName);
 			}
+			//服务端直接执行即可
 			Action->StartAction(Instigator);
 			return true;
 		}
@@ -141,6 +144,12 @@ bool USActionComponent::StopActionByName(AActor* Instigator, FName ActionName)
 		{
 			if(Action->IsRunning())
 			{
+				//如果是客户端，才需要向服务端请求RPC，否则将陷入无限循环
+				if(!GetOwner()->HasAuthority())
+				{
+					ServerStopAction(Instigator, ActionName);
+				}
+				
 				Action->StopAction(Instigator);
 				return true;
 			}
@@ -153,6 +162,11 @@ bool USActionComponent::StopActionByName(AActor* Instigator, FName ActionName)
 void USActionComponent::ServerStartAction_Implementation(AActor* Instigator, FName ActionName)
 {
 	StartActionByName(Instigator, ActionName);
+}
+
+void USActionComponent::ServerStopAction_Implementation(AActor* Instigator, FName ActionName)
+{
+	StopActionByName(Instigator, ActionName);
 }
 
 void USActionComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> &OutLifetimeProps) const

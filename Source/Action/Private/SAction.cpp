@@ -20,7 +20,8 @@ void USAction::StartAction_Implementation(AActor* Instigator)
 	USActionComponent *Comp = GetOwningComponent();
 	Comp->ActiveGameplayTags.AppendTags(GrantsTags);
 	//获取互斥资源
-	bIsRunning = true;
+	RepData.bIsRunning = true;
+	RepData.Instigator = Instigator;
 }
 
 
@@ -36,40 +37,44 @@ void USAction::StopAction_Implementation(AActor* Instigator)
 	USActionComponent *Comp = GetOwningComponent();
 	Comp->ActiveGameplayTags.RemoveTags(GrantsTags);
 	//释放互斥资源
-	bIsRunning = false;
+	RepData.bIsRunning = false;
+	RepData.Instigator = Instigator;
 }
 
-UWorld* USAction::GetWorld() const
-{
-	// Outer is set when creating action via NewObject<T>
-	AActor *Actor = Cast<AActor>(GetOuter());
-	if (Actor)
-	{
-		return Actor->GetWorld();
-	}
-	return nullptr;
-}
+//重载actor中的getworld
+ UWorld* USAction::GetWorld() const
+ {
+ 	// Outer is set when creating action via NewObject<T>
+ 	//GetWorld只有在AActor中才会自动实现，在UObject类中需要重载
+ 	AActor *Actor = Cast<AActor>(GetOuter());
+ 	if (Actor)
+ 	{
+ 		return Actor->GetWorld();
+ 	}
+ 	return nullptr;
+ }
 
 USActionComponent* USAction::GetOwningComponent() const
 {
 	return ActionComp;
 }
 
-void USAction::OnRep_IsRunning()
+void USAction::OnRep_RepData()
 {
-	if(bIsRunning)
+	if(RepData.bIsRunning)
 	{
-		StartAction(nullptr);
+		StartAction(RepData.Instigator);
+		//StartAction(nullptr);
 	}
 	else
 	{
-		StopAction(nullptr);
+		StopAction(RepData.Instigator);
 	}
 }
 
 bool USAction::IsRunning() const
 {
-	return bIsRunning;
+	return RepData.bIsRunning;
 }
 
 bool USAction::CanStart_Implementation(AActor* Instigator)
@@ -80,7 +85,7 @@ bool USAction::CanStart_Implementation(AActor* Instigator)
 		return false;
 	}
 	//查看当前action有没有被其他action所block
-	USActionComponent *Comp = Cast<USActionComponent>(GetOuter());
+	USActionComponent *Comp = GetOwningComponent();
 	if(Comp->ActiveGameplayTags.HasAny(BlockTags))
 	{
 		return false;
@@ -93,6 +98,6 @@ void USAction::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> &OutLi
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(USAction, bIsRunning);
+	DOREPLIFETIME(USAction, RepData);
 	DOREPLIFETIME(USAction, ActionComp);
 }

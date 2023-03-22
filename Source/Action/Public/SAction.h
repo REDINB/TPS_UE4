@@ -7,6 +7,22 @@
 #include "UObject/NoExportTypes.h"
 #include "SAction.generated.h"
 
+
+//action复制数据的结构体，用于替换isRunning的同时附带一个执行的actor，可以确认变量同时到达
+USTRUCT()
+struct FActionRepData
+{
+	GENERATED_BODY()
+
+public:
+	
+	UPROPERTY()
+	bool bIsRunning;
+
+	UPROPERTY()
+	AActor *Instigator;
+};
+
 class USActionComponent;
 class UWorld;
 /**
@@ -35,12 +51,13 @@ protected:
     FGameplayTagContainer BlockTags;
 
 	//互斥变量，只有在与原有值不同时才会触发回调函数
-	UPROPERTY(ReplicatedUsing = "OnRep_IsRunning")
-	bool bIsRunning;
+	UPROPERTY(ReplicatedUsing = "OnRep_RepData")
+	FActionRepData RepData;
+	//bool bIsRunning;
 
 	//回调函数，主要用于修改IsRunning变量的状态
 	UFUNCTION()
-	void OnRep_IsRunning();
+	void OnRep_RepData();
 public:
 
 	//初始化action组件

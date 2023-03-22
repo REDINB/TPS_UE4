@@ -28,17 +28,6 @@ void ASMagicProjectile::OnActorOverlap(UPrimitiveComponent* OverlappedComponent,
 	//获得粒子碰撞者，并且设置无法对自己造成伤害
 	if (OtherActor && OtherActor != GetInstigator())
 	{
-		// //获得受击者身上的属性组件，用于更改受击者属性
-		// USAttributeComponent* AttributeComp = Cast<USAttributeComponent>(OtherActor->GetComponentByClass(USAttributeComponent::StaticClass()));
-		// if (AttributeComp)
-		// {
-		// 	//命中时造成伤害并产生爆炸效果
-		// 	AttributeComp->ApplyHealthChange(GetInstigator(), -DamageAmount);
-		// 	
-		// 	// Only explode when we hit something valid
-		// 	Explode();
-		// }
-		
 		//当玩家被攻击时获得其身上的action组件，如果该玩家身上拥有反弹的tag，则将子弹反弹会反方向
 		USActionComponent *ActionComp = Cast<USActionComponent>(OtherActor->GetComponentByClass(USActionComponent::StaticClass())); 
 		if(ActionComp && ActionComp->ActiveGameplayTags.HasTag(ParryTag))
@@ -55,8 +44,8 @@ void ASMagicProjectile::OnActorOverlap(UPrimitiveComponent* OverlappedComponent,
 			//产生爆炸效果
 			Explode();
 
-			//给粒子附加燃烧tag
-			if(ActionComp)
+			//给粒子附加燃烧tag，只有服务端才能添加action
+			if(ActionComp && HasAuthority())
 			{
 				ActionComp->AddAction(GetInstigator(), BurningActionClass);
 			}

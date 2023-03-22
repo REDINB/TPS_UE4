@@ -153,6 +153,9 @@ void ASCharacter::OnHealthChanged(AActor* InstigatorActor, USAttributeComponent*
 		//生命值小于等于0时获得角色的controller并禁用
 		APlayerController *PC = Cast<APlayerController>(GetController());
 		DisableInput(PC);
+
+		//设置生命期
+		SetLifeSpan(5.0f);
 	}
 }
 

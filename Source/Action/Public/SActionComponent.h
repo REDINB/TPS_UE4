@@ -48,6 +48,9 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerStartAction(AActor* Instigator, FName ActionName);
 	
+	UFUNCTION(Server, Reliable)
+	void ServerStopAction(AActor* Instigator, FName ActionName);
+	
 	//现有Action的列表
 	UPROPERTY(Replicated)
 	TArray<USAction*> Actions;

@@ -70,28 +70,31 @@ bool USAttributeComponent::ApplyHealthChange(AActor *InstigatorActor, float Delt
 	}
 	
 	float OldHealth = Health;
+	float NewHealth = FMath::Clamp(Health + Delta, 0.0f, HealthMax);
 
-	//使得Health的区间大于0小于最大生命值
-	Health = FMath::Clamp(Health + Delta, 0.0f, HealthMax);
-
-	float ActualDelta = Health - OldHealth;
-	//调用生命值变化的广播事件
-	//OnHealthChanged.Broadcast(InstigatorActor, this, Health, ActualDelta);
-
-	//该广播事件如果是客户端则会在本地运行，如果是服务端则会广播到客户端
-	if(ActualDelta != 0.0f)
+	float ActualDelta = NewHealth - OldHealth;
+	//限制客户端权限
+	if(GetOwner()->HasAuthority())
 	{
-		MulticastHealthChanged(InstigatorActor, Health, ActualDelta);
-	}
-	
-	//生命值为零时死亡
-	if(ActualDelta < 0.0f && Health == 0.0f)
-	{
-		ASGameModeBase *GM = GetWorld()->GetAuthGameMode<ASGameModeBase>();
-		if(GM)
+		//使得Health的区间大于0小于最大生命值
+		Health = NewHealth;
+		
+		//调用生命值变化的广播事件
+		//OnHealthChanged.Broadcast(InstigatorActor, this, Health, ActualDelta);
+		//该广播事件如果是客户端则会在本地运行，如果是服务端则会广播到客户端
+		if(ActualDelta != 0.0f)
 		{
-			//调用击杀玩家重生功能
-			GM->OnActionKilled(GetOwner(), InstigatorActor);
+			MulticastHealthChanged(InstigatorActor, Health, ActualDelta);
+		}
+		//生命值为零时死亡，gamemode只在服务端上运行，在客户端没有必要花费时间验证
+		if(ActualDelta < 0.0f && Health == 0.0f)
+		{
+			ASGameModeBase *GM = GetWorld()->GetAuthGameMode<ASGameModeBase>();
+			if(GM)
+			{
+				//调用击杀玩家重生功能
+				GM->OnActionKilled(GetOwner(), InstigatorActor);
+			}
 		}
 	}
 	return ActualDelta != 0;

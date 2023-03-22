@@ -144,6 +144,7 @@ void USInteractionComponent::FindBestInteractable()
 
 void USInteractionComponent::PrimaryInteract()
 {
+	//Server RPC
 	ServerInteract(FocusedActor);
 }
 

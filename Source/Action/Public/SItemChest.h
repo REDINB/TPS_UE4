@@ -24,7 +24,7 @@ public:
 
 protected:
 
-	//网络复制变量，变化时触发同步函数？
+	//网络复制变量，变化时在客户端触发回调函数，因此在服务端需要主动调用该回调函数
 	UPROPERTY(ReplicatedUsing = "OnRep_LidOpened", BlueprintReadOnly)
 	bool bLidOpened;
 
