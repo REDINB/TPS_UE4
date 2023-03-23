@@ -8,8 +8,8 @@
 
 
 class USSaveGame;
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCreditsChanged, ASPlayerState*, PlayerState, int32, NewCredits, int32,
-                                               Delta);
+//积分变化的宏
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCreditsChanged, ASPlayerState*, PlayerState, int32, NewCredits, int32, Delta);
 /**
  * 
  */
@@ -19,8 +19,12 @@ class ACTION_API ASPlayerState : public APlayerState
 	GENERATED_BODY()
 protected:
 	//积分
-	UPROPERTY(EditDefaultsOnly, Category = "Credits")
+	UPROPERTY(EditDefaultsOnly, ReplicatedUsing = "OnRep_Credits", Category = "Credits")
 	int32 Credits;
+
+	// 通过传入原有的积分可以简单计算出delta，只能传递相同类型的一个值，如果无法实现则要使用rpc，消耗会比较大
+	UFUNCTION()
+	void OnRep_Credits(int32 OldCredits);
 
 public:
 	

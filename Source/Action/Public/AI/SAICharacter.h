@@ -70,6 +70,8 @@ protected:
 	//系统提供的AI感知事件
 	UFUNCTION()
 	void OnPawnSeen(APawn *Pawn);
-	
 
+	//AI感知广播
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPawnSeen();
 };

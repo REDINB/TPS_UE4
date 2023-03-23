@@ -16,6 +16,12 @@ class ACTION_API ASPowerupActor : public AActor, public ISGameplayInterface
 	
 protected:
 
+	UPROPERTY(ReplicatedUsing="OnRep_IsActive")
+	bool bIsActive;
+
+	UFUNCTION()
+	void OnRep_IsActive();
+
 	//重生时间
 	UPROPERTY(EditAnywhere, Category = "Powerup")
 	float RespawnTime;

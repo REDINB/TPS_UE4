@@ -115,9 +115,19 @@ void ASAICharacter::OnPawnSeen(APawn* Pawn)
 {
 	// 仅在第一次发现玩家时生成UI
 	if (GetTargetActor() != Pawn)
-	{	//设置看见的人物为目标对象
+	{
+		//设置看见的人物为目标对象
 		SetTargetActor(Pawn);
+		//广播AI感知的效果
+		MulticastPawnSeen();
+	}
 
+
+		
+
+}
+void ASAICharacter::MulticastPawnSeen_Implementation()
+{
 		USWorldUserWidget* NewWidget = CreateWidget<USWorldUserWidget>(GetWorld(), SpottedWidgetClass);
 		if (NewWidget)
 		{
@@ -126,7 +136,4 @@ void ASAICharacter::OnPawnSeen(APawn* Pawn)
 			// May end up behind the minion health bar otherwise.
 			NewWidget->AddToViewport(10);
 		}
-	}
-	//为了使感知效果更明显，这里使用debug字符串来显示
-	//DrawDebugString(GetWorld(), GetActorLocation(), "PLAYER SPOTTED", nullptr, FColor::White, 4.0f, true);
 }

@@ -48,14 +48,16 @@ void ASGameModeBase::InitGame(const FString& MapName, const FString& Options, FS
 
 void ASGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
-	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+	// Calling Before Super:: so we set variables before 'beginplayingstate' is called in PlayerController (which is where we instantiate UI)
 
 	//生成新玩家时读取存储游戏中的状态
 	ASPlayerState *PS = NewPlayer->GetPlayerState<ASPlayerState>();
-	if(PS)
+	if(ensure(PS))
 	{
 		PS->LoadPlayerState(CurrentSaveGame);
 	}
+	
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 }
 
 void ASGameModeBase::StartPlay()
@@ -235,8 +237,10 @@ void ASGameModeBase::OnActionKilled(AActor* VictimActor, AActor* Killer)
 	}
 	// 成功击杀电脑将获得击杀奖励
 	APawn* KillerPawn = Cast<APawn>(Killer);
-	if (KillerPawn)
+	//杀死自己没有积分
+	if (KillerPawn && KillerPawn != VictimActor)
 	{
+		//只有玩家有playerstate，bot会返回nullptr
 		if (ASPlayerState* PS = KillerPawn->GetPlayerState<ASPlayerState>()) // < can cast and check for nullptr within if-statement.
 			{
 				PS->AddCredits(CreditsPerKill);

@@ -3,6 +3,7 @@
 
 #include "SPowerupActor.h"
 #include "Components/SphereComponent.h"
+#include "Net/UnrealNetwork.h"
 
 ASPowerupActor::ASPowerupActor()
 {
@@ -18,6 +19,7 @@ ASPowerupActor::ASPowerupActor()
 	MeshComp->SetupAttachment(RootComponent);
 	//重生时间
 	RespawnTime = 10.0f;
+	bIsActive = true;
 
 	//开启网络同步
 	SetReplicates(true);
@@ -48,9 +50,20 @@ void ASPowerupActor::HideAndCooldownPowerup()
 
 void ASPowerupActor::SetPowerupState(bool bNewIsActive)
 {
-	SetActorEnableCollision(bNewIsActive);
-	
-	//使得根节点和他的子节点都可见
-	RootComponent->SetVisibility(bNewIsActive, true);
+	//设置交互物体的状态
+	bIsActive = bNewIsActive;
+	OnRep_IsActive();
+}
+void ASPowerupActor::OnRep_IsActive()
+{
+	//设置碰撞和是否可见
+	SetActorEnableCollision(bIsActive);
+	RootComponent->SetVisibility(bIsActive, true);
 }
 
+//设置复制体的生命期？
+void ASPowerupActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ASPowerupActor, bIsActive);
+}
