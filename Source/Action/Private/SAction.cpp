@@ -22,6 +22,15 @@ void USAction::StartAction_Implementation(AActor* Instigator)
 	//获取互斥资源
 	RepData.bIsRunning = true;
 	RepData.Instigator = Instigator;
+
+	//只有服务端设置时长，然后进行属性复制给客户端
+	if (GetOwningComponent()->GetOwnerRole() == ROLE_Authority)
+	{
+		//获取获得buff时的游戏时间用于计算buff剩余时长
+		TimeStarted = GetWorld()->TimeSeconds;
+	}
+	//开始action时触发广播
+	GetOwningComponent()->OnActionStarted.Broadcast(GetOwningComponent(), this);
 }
 
 
@@ -39,6 +48,9 @@ void USAction::StopAction_Implementation(AActor* Instigator)
 	//释放互斥资源
 	RepData.bIsRunning = false;
 	RepData.Instigator = Instigator;
+
+	//停止action时触发广播
+	GetOwningComponent()->OnActionStopped.Broadcast(GetOwningComponent(), this);
 }
 
 //重载actor中的getworld
@@ -77,6 +89,7 @@ bool USAction::IsRunning() const
 	return RepData.bIsRunning;
 }
 
+
 bool USAction::CanStart_Implementation(AActor* Instigator)
 {
 	//互斥资源被占用了就无法开始新的action
@@ -93,11 +106,12 @@ bool USAction::CanStart_Implementation(AActor* Instigator)
 	return true;
 }
 
-//获得网络复制属性的生命周期？
+//获得网络复制属性的生命期？
 void USAction::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty> &OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(USAction, RepData);
+	DOREPLIFETIME(USAction, TimeStarted);
 	DOREPLIFETIME(USAction, ActionComp);
 }

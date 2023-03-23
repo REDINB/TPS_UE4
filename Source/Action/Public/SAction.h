@@ -35,6 +35,11 @@ class ACTION_API USAction : public UObject
 	GENERATED_BODY()
 protected:
 
+	//BUFF的纹理图标
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	UTexture2D* Icon;
+
+	//action组件
 	UPROPERTY(Replicated)
 	USActionComponent *ActionComp;
 	
@@ -54,6 +59,10 @@ protected:
 	UPROPERTY(ReplicatedUsing = "OnRep_RepData")
 	FActionRepData RepData;
 	//bool bIsRunning;
+
+	//记录buff开始时的世界时间，为了让晚加入的玩家也正确认识到buff，将时间进行属性同步，一旦新玩家加入就会同步服务端的时间
+	UPROPERTY(Replicated)
+	float TimeStarted;
 
 	//回调函数，主要用于修改IsRunning变量的状态
 	UFUNCTION()

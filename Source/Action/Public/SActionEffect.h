@@ -18,6 +18,10 @@ public:
 
 	virtual void StopAction_Implementation(AActor* Instigator) override;
 
+	//获取buff剩余时长
+	UFUNCTION(BlueprintCallable, Category = "Action")
+	float GetTimeRemaining() const;
+
 	USActionEffect();
 protected:
 	//buff持续时间

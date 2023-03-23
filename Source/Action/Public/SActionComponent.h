@@ -7,6 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "SActionComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnActionStateChanged, USActionComponent*, OwningComp, USAction*, Action);
 
 class USAction;
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -52,7 +53,7 @@ protected:
 	void ServerStopAction(AActor* Instigator, FName ActionName);
 	
 	//现有Action的列表
-	UPROPERTY(Replicated)
+	UPROPERTY(BlueprintReadOnly, Replicated)
 	TArray<USAction*> Actions;
 
 	//在人物蓝图中选择人物默认带有的action
@@ -66,6 +67,14 @@ public:
 
 	//网络复制相关
 	bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
+	//异常状态开始
+	UPROPERTY(BlueprintAssignable)
+	FOnActionStateChanged OnActionStarted;
+
+	//异常状态结束
+	UPROPERTY(BlueprintAssignable)
+	FOnActionStateChanged OnActionStopped;
 	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
